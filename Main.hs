@@ -98,4 +98,5 @@ solutionTerm bigM (Equation a x b m) =
     * Is 0 allowed?
     * Inverse of 1 mod 1
     * Negative numbers allowed?
+4- Build is for windows 64 bit
 -}
