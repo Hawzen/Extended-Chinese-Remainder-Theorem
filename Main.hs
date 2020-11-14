@@ -1,20 +1,16 @@
 module Main where
 import Data.List
-import Debug.Trace
 
 main :: IO ()
 main = do
     eqs <- getEquations
     let ms = map m eqs
         (bigM, bigMs) = calcMs ms
-    if coprimes ms then return () else error "No solution"
-    let summation = sum $ map (`solutionTerm` bigM) eqs
-    print $ summation `mod` bigM
+    if coprimes ms 
+        then let summation = sum $ map (solutionTerm bigM) eqs
+             in print $ summation `mod` bigM
+        else error "No solution"
 
-{-
-    Check pariwise coprimality in main later, maybe in big function with when clause
-    Insert test cases via command line | 
- -}
 
 type Modulo = Integer
 data Equation = Equation { a :: Integer
@@ -23,11 +19,10 @@ data Equation = Equation { a :: Integer
                          , m :: Modulo
                          } deriving (Eq, Show)
 
-
 getEquation :: IO Equation
 getEquation = do 
             nums <- getLine
-            let (a:b:m:[]) = traceShowId (map read $ words nums)
+            let (a:b:m:[]) = map read $ words nums
             return (check (Equation a (-1) b m))
 
 check :: Equation -> Equation
@@ -38,7 +33,7 @@ check eq@(Equation a _ _ m)
 getEquations :: IO [Equation]
 getEquations = do 
             n <- getInt :: IO Int
-            print n
+            print $ "Number of Equations:\t: " ++ (show n)
             sequence . take n $ repeat getEquation
         where
             getInt = fmap read getLine
@@ -50,23 +45,25 @@ coprimes [x] = True
 coprimes (x:xs) = and (map (coprime x) xs)
                   && coprimes xs
 
-calcMs :: [Modulo] -> (Modulo, [Modulo])
-calcMs ms  = let bigM = product ms
-                 bigMs = map (div bigM) ms
-             in (bigM, bigMs)
 
 gcd' :: Integer -> Integer -> Integer
 gcd' a 0 = a
 gcd' a b = let (q, r) = a `divMod` b
            in gcd' b r
 
+calcMs :: [Modulo] -> (Modulo, [Modulo])
+calcMs ms  = let bigM = product ms
+                 bigMs = map (div bigM) ms
+             in (bigM, bigMs)
+
 inverse :: Integer -> Modulo -> Integer
 inverse a m = let condition x = a * x `mod` m == 1
               in head $ filter condition [1..]
 
-solutionTerm :: Equation -> Modulo -> Integer
-solutionTerm (Equation a x b m) bigMi = 
+solutionTerm :: Modulo -> Equation -> Integer
+solutionTerm bigM (Equation a x b m) = 
         let a' = inverse a m
+            bigMi = div bigM m
             y = inverse bigMi m
         in a' * b * bigMi * y
 
