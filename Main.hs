@@ -1,15 +1,30 @@
 module Main where
 import Data.List
 
+intro = "281 Project | Fall 2020 | Mohand Alrasheed"
 main :: IO ()
 main = do
+    putStrLn intro
     eqs <- getEquations
     let ms = map m eqs
+        as = map a eqs
+        -- bs = map b eqs
         (bigM, bigMs) = calcMs ms
     if coprimes ms 
         then let summation = sum $ map (solutionTerm bigM) eqs
-             in print $ summation `mod` bigM
-        else error "No solution"
+                 ans = summation `mod` bigM
+                 bs = map (\(a, m) -> a * ans `rem` m) $ zip as ms
+                 checks = map (\(a, m, b) -> 
+                    "\t" ++ (show ans) ++ " * " ++ (show a) ++ " mod " ++ (show m) ++ " = " ++ (show b) ++ "\n"
+                    ) $ zip3 as ms bs
+             in do
+                    putStrLn $ "X: " ++ (show ans)
+                    putStrLn "Checks:"
+                    putStrLn $ mconcat checks
+                    putStrLn "Again? (y\\n): "
+                    again <- getLine
+                    if ('y' `elem` again) then main else return ()
+        else putStrLn "Error: No solution (modulos are not coprimes)"
 
 
 type Modulo = Integer
@@ -21,6 +36,7 @@ data Equation = Equation { a :: Integer
 
 getEquation :: IO Equation
 getEquation = do 
+            putStr "Enter an Equation (a b m): "
             nums <- getLine
             let (a:b:m:[]) = map read $ words nums
             return (check (Equation a (-1) b m))
@@ -32,13 +48,16 @@ check eq@(Equation a _ _ m)
 
 getEquations :: IO [Equation]
 getEquations = do 
+            putStr "Enter the number of equations: "
             n <- getInt :: IO Int
-            print $ "Number of Equations:\t: " ++ (show n)
             sequence . take n $ repeat getEquation
         where
             getInt = fmap read getLine
 
+coprime :: Integer -> Integer -> Bool
 coprime a b = gcd' a b == 1
+
+-- Pairwise co-primality
 coprimes :: [Modulo] -> Bool
 coprimes [] = True
 coprimes [x] = True
@@ -58,7 +77,9 @@ calcMs ms  = let bigM = product ms
 
 inverse :: Integer -> Modulo -> Integer
 inverse a m = let condition x = a * x `mod` m == 1
-              in head $ filter condition [1..]
+                  list = filter condition [1..m]
+              in if null list then error "No inverse [EDIT ME LATER]"
+                              else head list 
 
 solutionTerm :: Modulo -> Equation -> Integer
 solutionTerm bigM (Equation a x b m) = 
@@ -68,8 +89,17 @@ solutionTerm bigM (Equation a x b m) =
         in a' * b * bigMi * y
 
 -- Assumes a b are relatevly prime
--- scanGcd :: Integer -> Integer -> [(Integer, Integer, Integer)]
--- scanGcd a b = 
+-- extGcd :: Integer -> Integer -> [(Integer, Integer, Integer)]
+-- extGcd a b = 
 --           let stop (_, b, _)= b /= 0
 --               cont (a, b, _) = (b, rem a b, div a b)
 --           in takeWhile stop $ iterate cont (a, b, 1)
+
+{-
+1- Time complexity
+2- Data structure used (I used a list of Equations)
+3- "Where all the variables are integer"
+    * Is 0 allowed?
+    * Inverse of 1 mod 1
+    * Negative numbers allowed?
+-}
