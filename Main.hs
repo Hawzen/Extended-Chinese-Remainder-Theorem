@@ -1,5 +1,5 @@
 module Main where
-import Data.List
+import System.IO
 
 intro = "281 Project | Fall 2020 | Mohand Alrasheed"
 main :: IO ()
@@ -37,6 +37,7 @@ data Equation = Equation { a :: Integer
 getEquation :: IO Equation
 getEquation = do 
             putStr "Enter an Equation (a b m): "
+            hFlush stdout
             nums <- getLine
             let (a:b:m:[]) = map read $ words nums
             return (check (Equation a (-1) b m))
@@ -49,6 +50,7 @@ check eq@(Equation a _ _ m)
 getEquations :: IO [Equation]
 getEquations = do 
             putStr "Enter the number of equations: "
+            hFlush stdout
             n <- getInt :: IO Int
             sequence . take n $ repeat getEquation
         where
@@ -88,12 +90,6 @@ solutionTerm bigM (Equation a x b m) =
             y = inverse bigMi m
         in a' * b * bigMi * y
 
--- Assumes a b are relatevly prime
--- extGcd :: Integer -> Integer -> [(Integer, Integer, Integer)]
--- extGcd a b = 
---           let stop (_, b, _)= b /= 0
---               cont (a, b, _) = (b, rem a b, div a b)
---           in takeWhile stop $ iterate cont (a, b, 1)
 
 {-
 1- Time complexity
