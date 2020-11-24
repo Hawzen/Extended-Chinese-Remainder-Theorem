@@ -1,36 +1,8 @@
 module Main where
 import System.IO
-
-intro = "281 Project | Fall 2020 | Mohand Alrasheed"
-main :: IO ()
-main = do
-    putStrLn intro
-    eqs <- getEquations
-    let ms = map m eqs
-        as = map a eqs
-        -- bs = map b eqs
-        (bigM, bigMs) = calcMs ms
-    if coprimes ms 
-        then let summation = sum $ map (solutionTerm bigM) eqs
-                 ans = summation `mod` bigM
-                 bs = map (\(a, m) -> a * ans `mod` m) $ zip as ms
-                 checks = map (\(a, m, b) -> 
-                    "\t" ++ (show ans) ++ " * " ++ (show a) ++ " mod " ++ (show m) ++ " = " ++ (show b) ++ "\n"
-                    ) $ zip3 as ms bs
-             in do
-                    putStrLn $ "X: " ++ (show ans)
-                    putStrLn "Checks:"
-                    putStrLn $ mconcat checks
-                    again
-        else do
-            putStrLn "Error: No solution (modulos are not coprimes)"
-            again
-
--- again :: IO
-again = do
-    putStrLn "Again? (y\\n): "
-    again <- getLine
-    if ('y' `elem` again) then main else return ()
+import Data.Either
+import Text.Printf
+import System.Exit
 
 type Modulo = Integer
 data Equation = Equation { a :: Integer
@@ -38,22 +10,81 @@ data Equation = Equation { a :: Integer
                          , m :: Modulo
                          } deriving (Eq, Show)
 
+
+intro = "281 Project | Fall 2020 | Mohand Alrasheed"
+main :: IO ()
+main = do
+    putStrLn intro
+    eqs <- getEquations
+    
+    -- Check a m coprimality 
+    sequence $ map handleCheck eqs
+
+    -- Calculate m
+    let ms = map m eqs
+        as = map a eqs
+        (bigM, bigMs) = calcMs ms
+
+    -- Check if ms are pairwise coprime
+    if coprimes ms then return ()
+        else do
+            putStrLn "No solution (modulos are not pairwise coprime)"
+            again
+
+    let ans = (sum $ map (solutionTerm bigM) eqs) `mod` bigM
+        -- Check solutions
+        bs = map (\(a, m) -> a * ans `mod` m) $ zip as ms
+        checkSolution (a, b, m) = printf "\t%d * %d = %d (mod %d)\n" ans a b m :: String
+        checks = map checkSolution $ zip3 as bs ms
+    -- Print results and checks
+    printf "X: %d\n" ans
+    printf "Checks:\n%s\n" $ mconcat checks
+    again
+
+    where
+      checkEquation :: Equation -> Either Equation String
+      checkEquation eq@(Equation a _ m) 
+          | m <= 1 = Right "No solution (m is <= 1)"
+          | coprime a m = Left $ eq
+          | otherwise = Right $ "No solution (" ++ (show a) ++ " And " ++ (show m) ++ " are not coprime)"
+
+      handleCheck eq = do
+            let res = checkEquation eq
+                printAgain s = do 
+                        putStrLn s
+                        again
+            either (\_ -> return ()) printAgain res
+            
+      coprime :: Integer -> Integer -> Bool
+      coprime a b = gcd' a b == 1
+
+      coprimes :: [Modulo] -> Bool
+      coprimes [] = True
+      coprimes [x] = True
+      coprimes (x:xs) = and (map (coprime x) xs)
+                        && coprimes xs
+
+      -- Helper function
+      again :: IO ()
+      again = do
+          putStrLn "Again? (y\\n): "
+          again <- getLine
+          if ('y' `elem` again) then main else exitSuccess
+
+
+
 getEquation :: IO Equation
 getEquation = do 
             putStr "Enter an Equation (a b m): "
             hFlush stdout
             nums <- getLine
-            let (a:b:m:[]) = map read $ words nums
+            let (a:b:m:[]) = handleRead $ map read $ words nums
                 a':b':[] = map (formatter m) [a, b]
-            return (check (Equation a' b' m))
-          where
+            return (Equation a' b' m)
+        where
+            handleRead (a:b:m:[]) = (a:b:m:[])
+            handleRead  _ = error "Wrong format"
             formatter m x = x `mod` m
-
-check :: Equation -> Equation
-check eq@(Equation a _ m) 
-    | m <= 1 = error "m is <= 1: "
-    | coprime a m = eq
-    | otherwise = error $ "Coprime Error: " ++ (show a) ++ " And " ++ (show m) ++ " are not coprime"
 
 getEquations :: IO [Equation]
 getEquations = do 
@@ -68,15 +99,6 @@ gcd' :: Integer -> Integer -> Integer
 gcd' a 0 = a
 gcd' a b = let (q, r) = a `divMod` b
            in gcd' b r
-
-coprime :: Integer -> Integer -> Bool
-coprime a b = gcd' a b == 1
-
-coprimes :: [Modulo] -> Bool
-coprimes [] = True
-coprimes [x] = True
-coprimes (x:xs) = and (map (coprime x) xs)
-                  && coprimes xs
 
 calcMs :: [Modulo] -> (Modulo, [Modulo])
 calcMs ms  = let bigM = product ms
@@ -94,13 +116,3 @@ solutionTerm bigM (Equation a b m) =
             bigMi = div bigM m
             y = inverse bigMi m
         in a' * b * bigMi * y
-
-
-{-
-1- Time complexity
-2- Data structure used (I used a list of Equations)
-3- "Where all the variables are integer"
-    * Is 0 allowed?
-    * Inverse of 1 mod 1
-    * Negative numbers allowed?
--}
